@@ -115,7 +115,37 @@ class Transporter(threading.Thread):
   def validate_settings(self):
     valid_settings = self.valid_settings
     requeired_settings = self.required_settings
+    configured_settings = Set(self.setting.keys())
     
+    if len(configured_settings.difference(valid_setting)):
+      raise InvalidSettingError
+      
+    if len(require_settings.difference(configured_settings)):
+      raise MissingSettingError
+      
+  def sync_file(self, src, dst=None, action=None, callback=None, error_callback=None):
+    if dst is None:
+      dst = src
+    if action is None:
+      action = Transporter.ADD_MODIFY
+    elif action not in Transporter.ACTIONS.value():
+      raise InvalidActionError
+      
+    if dst.startswith("/"):
+      dst = dst[1:]
+      
+    self.lock.acquire()
+    self.queue.put((src, dst, action, callback, error_callback))
+    self.lock.release()
+    
+  def qsize(self):
+    self.lock.acquire()
+    qsize = self.queue.qsize()
+    self.lock.release()
+    return qsize
+  
+for name, mask in Transporter.ACTIONS.iteritems():
+  setattr(Transporter, name, mask)
   
 ```
 
